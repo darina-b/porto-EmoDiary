@@ -1,76 +1,38 @@
+# SENTIMENT EVALUATION MODEL:
+from textblob import TextBlob 
+wiki = TextBlob("Python is a high-level, general-purpose programming language.") # creates a blob out of text
+# sentiment analysis: 
+#The sentiment property returns a namedtuple of the form Sentiment(polarity, subjectivity). 
+#The polarity score is a float within the range [-1.0, 1.0]. 
+#The subjectivity is a float within the range [0.0, 1.0] 
+# where 0.0 is very objective and 1.0 is very subjective.
+
+testimonial = TextBlob("Textblob is amazingly simple to use. What great fun!")
+testimonial.sentiment
+# >> Sentiment(polarity=0.39166666666666666, subjectivity=0.4357142857142857)
+testimonial.sentiment.polarity
+# >> 0.39166666666666666
+
+# Ranges:
+# ??? FILTER -need or not ?: subjectivity >= 0.5 == to cut off the most objective ones???
+
+# polarity -1<=p<=-0.5 == 'Mood:pretty bad' 'one of those days', 'down', 'upset'
+# polarity -0.5<p<=0 == 'Mood: Ok''could be better', 'not the best day', 'need to smile more'
+# polarity 0<p<=0.5 == 'Mood: will do' 'not too bad', 'you are really trying despite all', 'nailing it'
+# polarity 0.5<p<=1 == 'Mood: feeling great' 'happy', 'in a good mood', 'good to see you smiling'
+
+# WORD -of-the-year/month? noun//verb//adjective 
+monty.words.count('ekki') # == non-case-sensitive search
+# You can specify whether or not the search should be case-sensitive (default is False):
+monty.words.count('ekki', case_sensitive=True)
+
+# Part-of-speech tags can be accessed through the tags property:
+wiki.tags
+# >> [('Python', 'NNP'), ('is', 'VBZ'), ('a', 'DT'), ('high-level', 'JJ'), ('general-purpose', 'JJ'), ('programming', 'NN'), ('language', 'NN')]
+
+# +++ BRING WordNet - to explain the most popular words:
+from textblob import Word
+Word("octopus").definitions
+# >> ['tentacles of octopus prepared as food', 'bottom-living cephalopod having a soft oval body with eight long tentacles']
 
 #############################################################
-# SENTIMENT EVALUATION MODEL:
-
-### Reading the Dataset ###
-import pandas as pd
-
-# Selecting a subset of data to be faster in demonstration
-train_df = pd.read_csv('../input/imdb-dataset-sentiment-analysis-in-csv-format/Train.csv').head(4000)
-valid_df = pd.read_csv('../input/imdb-dataset-sentiment-analysis-in-csv-format/Valid.csv').head(500)
-test_df = pd.read_csv('../input/imdb-dataset-sentiment-analysis-in-csv-format/Test.csv').head(500)
-print('Train: '+ str(len(train_df)))
-print('Valid: '+ str(len(valid_df)))
-print('Test: '+ str(len(test_df)))
-train_df.head(10)
-
-### Text pre-processing ###
-# Turnig all text to lowercase
-train_df['text'] = train_df['text'].str.lower()
-valid_df['text'] = valid_df['text'].str.lower()
-test_df['text'] = test_df['text'].str.lower()
-train_df.head()
-
-# Removing punctuation
-import string
-
-exclude = set(string.punctuation) 
-
-def remove_punctuation(x): 
-    try: 
-        x = ''.join(ch for ch in x if ch not in exclude) 
-    except: 
-        pass 
-    return x 
-
-train_df['text'] = train_df['text'].apply(remove_punctuation)
-valid_df['text'] = valid_df['text'].apply(remove_punctuation)
-test_df['text'] = test_df['text'].apply(remove_punctuation)
-train_df.head()
-
-# Removing stopwords
-from nltk.corpus import stopwords
-
-stop = stopwords.words('english')
-
-train_df['text'] = train_df['text'].apply(lambda x: ' '.join([word for word in x.split() if word not in (stop)]))
-valid_df['text'] = valid_df['text'].apply(lambda x: ' '.join([word for word in x.split() if word not in (stop)]))
-test_df['text'] = test_df['text'].apply(lambda x: ' '.join([word for word in x.split() if word not in (stop)]))
-train_df.head()
-
-### Sentences as Bag of Words ### Classical Model with TF-IDF and SVM ###
-from sklearn.feature_extraction.text import TfidfVectorizer
-
-# Create feature vectors for every sentence
-vectorizer = TfidfVectorizer(#min_df = 5,
-                             #max_df = 0.8,
-                             max_features = 20000,
-                             sublinear_tf = True,
-                             use_idf = True)#, stop_words='english')#vocabulary = list(embeddings_index.keys()
-
-train_vectors = vectorizer.fit_transform(train_df['text'])
-valid_vectors = vectorizer.transform(valid_df['text'])
-test_vectors = vectorizer.transform(test_df['text'])
-
-from sklearn import svm
-# SVM
-classifier_linear = svm.SVC(kernel='linear')
-#Train
-classifier_linear.fit(train_vectors, train_df['label'])
-
-from sklearn.metrics import classification_report
-
-predictions = classifier_linear.predict(test_vectors)
-# results
-report = classification_report(test_df['label'], predictions)
-print(report)
