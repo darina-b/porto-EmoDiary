@@ -2,7 +2,7 @@
 from textblob import TextBlob 
 wiki = TextBlob("Python is a high-level, general-purpose programming language.") # creates a blob out of text
 # sentiment analysis: 
-#The sentiment property returns a namedtuple of the form Sentiment(polarity, subjectivity). 
+#The sentiment property returns a named tuple of the form Sentiment(polarity, subjectivity). 
 #The polarity score is a float within the range [-1.0, 1.0]. 
 #The subjectivity is a float within the range [0.0, 1.0] 
 # where 0.0 is very objective and 1.0 is very subjective.
@@ -12,6 +12,7 @@ testimonial.sentiment
 # >> Sentiment(polarity=0.39166666666666666, subjectivity=0.4357142857142857)
 testimonial.sentiment.polarity
 # >> 0.39166666666666666
+testimonial.sentiment.subjectivity
 
 # Ranges:
 # ??? FILTER -need or not ?: subjectivity >= 0.5 == to cut off the most objective ones???
