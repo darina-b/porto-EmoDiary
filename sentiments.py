@@ -1,39 +1,36 @@
-# SENTIMENT EVALUATION MODEL:
-from textblob import TextBlob 
-wiki = TextBlob("Python is a high-level, general-purpose programming language.") # creates a blob out of text
-# sentiment analysis: 
-#The sentiment property returns a named tuple of the form Sentiment(polarity, subjectivity). 
-#The polarity score is a float within the range [-1.0, 1.0]. 
-#The subjectivity is a float within the range [0.0, 1.0] 
-# where 0.0 is very objective and 1.0 is very subjective.
+from datetime import datetime, timedelta
+from pathlib import Path
+#### from textblob import TextBlob
+from random import choice, shuffle
+import re
+import nltk
+# nltk.download(["stopwords","twitter_samples","movie_reviews","vader_lexicon","punkt", "punkt_tab"])
+from nltk.sentiment import SentimentIntensityAnalyzer
 
-testimonial = TextBlob("Textblob is amazingly simple to use. What great fun!")
-testimonial.sentiment
-# >> Sentiment(polarity=0.39166666666666666, subjectivity=0.4357142857142857)
-testimonial.sentiment.polarity
-# >> 0.39166666666666666
-testimonial.sentiment.subjectivity
+a="> 11.09.2024 [19:33:40] Whatever goes today, let's see if anything works here. Ha-ha (auto-grade: 0, user-grade: 50) > 11.09.2024 [19:35:30] fantastic day! Everything works, everything is smooth and nice (auto-grade: 100, user-grade: 200)"
+contents=a.split('> ')[1:]
+for c in contents:
+    print(c)
 
-# Ranges:
-# ??? FILTER -need or not ?: subjectivity >= 0.5 == to cut off the most objective ones???
+    c_entry_date_time=datetime.strptime(c.split(']')[0].replace(' [', ' '),"%d.%m.%Y %H:%M:%S") # separate entry's date and convert it into a datetime object
+    print(f'c_entry_date_time:{c_entry_date_time}')
+    
+    c_entry=c.split(']')[1]
+    print(f'c_entry: {c_entry}')
+    find_01=re.search('\(auto\-grade\: ',c_entry)
+    find_02=re.search(', user\-grade\: ',c_entry)
+    find_03=re.search('user\-grade\: .*\)',c_entry)
 
-# polarity -1<=p<=-0.5 == 'Mood:pretty bad' 'one of those days', 'down', 'upset'
-# polarity -0.5<p<=0 == 'Mood: Ok''could be better', 'not the best day', 'need to smile more'
-# polarity 0<p<=0.5 == 'Mood: will do' 'not too bad', 'you are really trying despite all', 'nailing it'
-# polarity 0.5<p<=1 == 'Mood: feeling great' 'happy', 'in a good mood', 'good to see you smiling'
+    #print(f'find_01:{find_01}')
+    #print(f'find_02:{find_02}')
+    #print(f'find_03:{find_03}')
 
-# WORD -of-the-year/month? noun//verb//adjective 
-monty.words.count('ekki') # == non-case-sensitive search
-# You can specify whether or not the search should be case-sensitive (default is False):
-monty.words.count('ekki', case_sensitive=True)
+    c_entry_content=c_entry[:find_01.start()].strip() # separate entry's content
+    print(f'c_entry_content: {c_entry_content}')
+    
+    c_entry_emo_meter=c_entry[find_01.end():find_02.start()].strip()
+    print(f'c_entry_emo_meter: {c_entry_emo_meter}')
 
-# Part-of-speech tags can be accessed through the tags property:
-wiki.tags
-# >> [('Python', 'NNP'), ('is', 'VBZ'), ('a', 'DT'), ('high-level', 'JJ'), ('general-purpose', 'JJ'), ('programming', 'NN'), ('language', 'NN')]
-
-# +++ BRING WordNet - to explain the most popular words:
-from textblob import Word
-Word("octopus").definitions
-# >> ['tentacles of octopus prepared as food', 'bottom-living cephalopod having a soft oval body with eight long tentacles']
-
-#############################################################
+    c_emo_grade=c_entry[find_02.end():find_03.end()-1].strip() # WORKS ### NAMING!!!
+    print(f'c_emo_grade: {c_emo_grade}')
+    #re.search('(auto-grade:',c).start()
