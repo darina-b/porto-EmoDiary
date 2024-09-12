@@ -9,7 +9,7 @@ from pathlib import Path
 from random import choice, shuffle
 import re
 import nltk
-# nltk.download(["stopwords","twitter_samples","movie_reviews","vader_lexicon","punkt", "punkt_tab"])
+#nltk.download(["stopwords","twitter_samples","movie_reviews","vader_lexicon","punkt", "punkt_tab"])
 from nltk.sentiment import SentimentIntensityAnalyzer
 
 ###################
@@ -26,8 +26,8 @@ class Entry: # == the basic unit of the diary list
     def __init__ (self, entry_date_time: datetime, entry_content: str, emo_meter=None, emo_grade=None):
         self.entry_date_time=entry_date_time
         self.entry_content=entry_content
-        self.emo_meter=emo_meter
-        self.emo_grade=emo_grade
+        self.emo_meter=emo_meter # evaluated sentiment
+        self.emo_grade=emo_grade # sentiment grade given by user
 
 # the line above returns a dict: {'neg': 0.0, 'neu': 0.295, 'pos': 0.705, 'compound': 0.8012}
 # You’ll get back a dictionary of different scores. The negative, neutral, and positive scores are related: 
@@ -44,26 +44,26 @@ class Entry: # == the basic unit of the diary list
 
         if self.entry_sentiment['neu']>=0.6:
             if self.entry_sentiment['pos']<0.05:
-                return '0' #== Mood/Day: bad
+                return '0-29' #== Mood/Day: bad
             else:
-                return '50' #== Mood/Day: average
+                return '30-70' #== Mood/Day: average
         else:
             if self.entry_sentiment['compound']<-0.5:
                 if self.entry_sentiment['pos']>0.00:
-                    return '50' #== Mood/Day: average
+                    return '30-70' #== Mood/Day: average
                 else:
-                    return '0' #== Mood/Day: bad
+                    return '0-29' #== Mood/Day: bad
             if self.entry_sentiment['compound']>0.5:
-                return '100' #== Mood/Day: good    
+                return '71-100' #== Mood/Day: good    
             else:
                 if self.entry_sentiment['neg']>0.4:
-                    return '0' #== Mood/Day: bad
+                    return '0-29' #== Mood/Day: bad
                 else:
-                    return '50' #== Mood/Day: averag  
+                    return '30-70' #== Mood/Day: averag  
        
     def __str__(self):
-        return f"> {self.entry_date_time.day:02g}.{self.entry_date_time.month:02g}.{self.entry_date_time.year} [{self.entry_date_time.hour:02g}:{self.entry_date_time.minute:02g}:{self.entry_date_time.second:02g}] {self.entry_content} (auto-grade: {self.emo_meter}, user-grade: {self.emo_grade})"
-        #return f"> {self.entry_date_time.day:02g}.{self.entry_date_time.month:02g}.{self.entry_date_time.year} [{self.entry_date_time.hour:02g}:{self.entry_date_time.minute:02g}:{self.entry_date_time.second:02g}] {self.entry_content})"
+        #return f"> {self.entry_date_time.day:02g}.{self.entry_date_time.month:02g}.{self.entry_date_time.year} [{self.entry_date_time.hour:02g}:{self.entry_date_time.minute:02g}:{self.entry_date_time.second:02g}] {self.entry_content} (auto-grade: {self.emo_meter}, user-grade: {self.emo_grade})"
+        return f"> {self.entry_date_time.day:02g}.{self.entry_date_time.month:02g}.{self.entry_date_time.year} [{self.entry_date_time.hour:02g}:{self.entry_date_time.minute:02g}:{self.entry_date_time.second:02g}] {self.entry_content}"
     
 class Diary(Entry): # == a collection of Entries written into a .txt file
     def __init__ (self, file_name: str):
@@ -111,7 +111,7 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
                 self.quit()
         
     def menu(self): # == displays the menu
-        print("\nPlease, choose what you want to do:\n0 - exit this app\n1 - add an entry\n2 - read entries for the last few days\n3 - change an entry\n4 - delete an entry")    
+        print("\nPlease, choose what you want to do:\n0 - exit this app\n1 - add an entry\n2 - read entries for the last few days\n3 - check stats on your language\n4 - check stats on your moods")    
         try:
             choice=int(input("\nYour choice: "))
             if choice in [0,1,2,3,4]:
@@ -143,7 +143,7 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
             print("Invalid time! Please, type in a valid time. Check the format >> hh:mm:ss")
             return False
         
-    def find_entry (self): # checks that the ENTRY EXISTS in the diary
+    ###def find_entry (self): # checks that the ENTRY EXISTS in the diary
         while True:
             old_entry_date=input("Entry's date (dd.mm.yyyy): ").strip()
             if self.date_check(old_entry_date):
@@ -168,7 +168,7 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
 
         # reactions to an entry:
         emo={
-            '0':["Not the best day ever?", 
+            '0-29':["Looks like it's not the best day ever?", 
                  "Sh*t happens. You'll try again tomorrow.", 
                  "As a wise man said...Some days are genuinely f*cked and cannot be unf*cked, so go home and sleep.", 
                  "Big HUG!", 
@@ -178,12 +178,12 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
                  "Be optimistic, it can always be worse ;)", 
                  "Prescribing you more self-care and more self-love today!"],
 
-            '50':[f"Perhaps, you think it's been just an average {self.entry.entry_date_time.strftime("%A")}, but" , 
+            '30-70':[f"Perhaps, you think it's been just an average {self.entry.entry_date_time.strftime("%A")}, but" , 
                   "objectively speaking, all is good, right? ;)", 
                   "think of all the bad things that did not happen today. See how lucky you are?", 
                   "you are really trying and it shows!", 
                   "in fact, you are nailing it, love!"],
-            '100':["It seems you've had a pretty good day.", 
+            '71-100':["It seems you've had a pretty good day.", 
                    "Congrats! Keep going!", 
                    "Be proud of yourself!", 
                    "Tomorrow might be even better!", 
@@ -210,11 +210,12 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
         
         # Brief assessment of the accuracy:
         by_user=int(entry.emo_grade)
-        by_app=int(self.entry.emo_meter)
-        if (by_user<33 and by_app==0) or (33<=by_user<=66 and by_app==50) or (by_user>66 and by_app==100):
+        by_app=self.entry.emo_meter
+        print(f'My guess was: {entry.emo_meter}.')
+        if (by_user<30 and by_app=='0-29') or (30<=by_user<=70 and by_app=='30-70') or (by_user>70 and by_app=='71-100'):
             print('So, I guessed correctly.\nThank you!')
         else:
-            print('I see that I guessed it wrong.\nYour rate will help me guess better in the future!\nThank you! ')
+            print('I see that I was wrong. Your rate will help me guess better in the future.\nThank you! ')
 
     # When you EXIT the app (==0):
     def quit(self):
@@ -223,13 +224,24 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
           
     # To ADD an entry (==1):
     def new_entry(self):
-        notes=input("Diary entry: ")        
-        diary_entry=Entry(datetime.now(), notes)
+        #notes=input("Diary entry: ")  
+        diary_entry=Entry(datetime.now(), self.check_entry())
         self.__diary.diary_list.append(diary_entry)
         self.changes=True
-        print("Your diary entry was added:")
+        print("The entry you added:")
         print(diary_entry)
         self.entry_reaction(diary_entry)
+
+    # To CHECK/CHANGE an entry - based on its time&date (==3):
+    def check_entry(self):
+        notes=input("Diary entry: ") 
+        print("You won't be able to change this entry later, so please read it carefully now:")
+        print(f'"{notes}"')
+        checked=input("\nIf everything is correct >> press Enter.\nIf not >> type in the new version:")
+        if checked == '':
+            return notes
+        else:
+            return checked
 
     # To READ entries for the last N days (==2):
     def read_entries(self):
@@ -247,19 +259,7 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
         entry_pl = lambda a: ('entry' if str(a)[-1]=='1' and a!=11 else 'entries')
         print(f"\n[Overall, you've had {count} {entry_pl(count)} in the last {n_days} {day_pl(n_days)}]")
 
-    # To CHANGE an entry - based on its time&date (==3):
-    def change_entry(self):
-        print("Please specify below, which entry you wish to change")
-        entry=self.find_entry()
-        if entry == None:
-            print("You have entered valid date and time, but there is no diary entry searching them")
-        else:
-            changed_entry_content=input("Please, type new content for this entry: ")
-            entry.entry_content=changed_entry_content
-            self.changes=True
-            print("The entry was changed")
-
-    # To DELETE an entry - based on its time&date (==4):
+    # STATISTICS (==4):
     def delete_entry(self):
         print("Please specify below, which entry you wish to delete")
         entry=self.find_entry()
@@ -289,13 +289,13 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
             if menu==2:
                 self.read_entries()
 
-            # To change an entry:    
-            if menu==3:
-                self.change_entry()
+            # To see language statistics:    
+            #if menu==3:
+                #self.change_entry()
 
-            # To delete an entry:    
-            if menu==4:
-                self.delete_entry()      
+            # To see mood statistics:    
+            #if menu==4:
+                #self.delete_entry()      
 
 # to RUN the app:
 app=Diary_app()
