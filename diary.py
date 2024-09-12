@@ -8,19 +8,10 @@ from pathlib import Path
 #### from textblob import TextBlob
 from random import choice, shuffle
 import re
+import pandas as pd
 import nltk
 #nltk.download(["stopwords","twitter_samples","movie_reviews","vader_lexicon","punkt", "punkt_tab"])
 from nltk.sentiment import SentimentIntensityAnalyzer
-
-###################
-# Ranges:
-# ??? FILTER -need or not ?: subjectivity >= 0.5 == to cut off the most objective ones???
-
-# polarity -1<=p<=-0.5 == 'Mood:pretty bad' 'one of those days', 'down', 'upset'
-# polarity -0.5<p<=0 == 'Mood: Ok''could be better', 'not the best day', 'need to smile more'
-# polarity 0<p<=0.5 == 'Mood: will do' 'not too bad', 'you are really trying despite all', 'nailing it'
-# polarity 0.5<p<=1 == 'Mood: feeling great' 'happy', 'in a good mood', 'good to see you smiling'
-###################
 
 class Entry: # == the basic unit of the diary list
     def __init__ (self, entry_date_time: datetime, entry_content: str, emo_meter=None, emo_grade=None):
@@ -29,18 +20,15 @@ class Entry: # == the basic unit of the diary list
         self.emo_meter=emo_meter # evaluated sentiment
         self.emo_grade=emo_grade # sentiment grade given by user
 
-# the line above returns a dict: {'neg': 0.0, 'neu': 0.295, 'pos': 0.705, 'compound': 0.8012}
-# You’ll get back a dictionary of different scores. The negative, neutral, and positive scores are related: 
-# They all add up to 1 and can’t be negative. The compound score is calculated differently. 
-# It’s not just an average, and it can range from -1 to 1.
-### PLAY WITH EVALUATION!!!! ###:
         if self.emo_meter==None:
             self.emo_meter = self.mood_checker() # assigns mood grades to distribute responses
-    def mood_checker (self):
+
+    def mood_checker (self): # Hope to replace its content by a better evaluation model in the future without too much redo
         sia = SentimentIntensityAnalyzer()
         self.entry_sentiment=sia.polarity_scores(self.entry_content) # objective evaluation of entry sentiment values by Vader
         # self.entry_sentiment is a dict, eg: {'neg': 0.0, 'neu': 0.295, 'pos': 0.705, 'compound': 0.8012} 
         # usually sentence's sentiment is evaluated by 'compound' returned (cp): if cp>0 ==>pos, if cp<0 ==> neg
+        # this simple approach did not work on my own entries, so I <tried> to adjust it a bit, based on my conclusions (still not too good)
 
         if self.entry_sentiment['neu']>=0.6:
             if self.entry_sentiment['pos']<0.05:
@@ -62,8 +50,9 @@ class Entry: # == the basic unit of the diary list
                     return '30-70' #== Mood/Day: averag  
        
     def __str__(self):
-        #return f"> {self.entry_date_time.day:02g}.{self.entry_date_time.month:02g}.{self.entry_date_time.year} [{self.entry_date_time.hour:02g}:{self.entry_date_time.minute:02g}:{self.entry_date_time.second:02g}] {self.entry_content} (auto-grade: {self.emo_meter}, user-grade: {self.emo_grade})"
-        return f"> {self.entry_date_time.day:02g}.{self.entry_date_time.month:02g}.{self.entry_date_time.year} [{self.entry_date_time.hour:02g}:{self.entry_date_time.minute:02g}:{self.entry_date_time.second:02g}] {self.entry_content}"
+        # below is __str__ for checking (incl evaluation scores):
+        return f"> {self.entry_date_time.day:02g}.{self.entry_date_time.month:02g}.{self.entry_date_time.year} [{self.entry_date_time.hour:02g}:{self.entry_date_time.minute:02g}:{self.entry_date_time.second:02g}] {self.entry_content} (auto-grade: {self.emo_meter}, user-grade: {self.emo_grade})"
+        #return f"> {self.entry_date_time.day:02g}.{self.entry_date_time.month:02g}.{self.entry_date_time.year} [{self.entry_date_time.hour:02g}:{self.entry_date_time.minute:02g}:{self.entry_date_time.second:02g}] {self.entry_content}"
     
 class Diary(Entry): # == a collection of Entries written into a .txt file
     def __init__ (self, file_name: str):
@@ -97,7 +86,7 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
         self.changes=False
 
     def path_checked(self): # == makes sure the file with such diary name exists
-        diary_name=input("What is the name of your diary? ")+'.txt'
+        diary_name=input("Hi! Welcome to EmoNotes. What is the name of your diary? ")+'.txt'
         if Path('./'+diary_name).is_file():
             return diary_name
         else:
@@ -162,11 +151,21 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
         for e in self.__diary.diary_list:
             if e.entry_date_time == old_entry_date_time:
                 return e
-
+   
+    def check_entry(self): # checking if the new entry is correct, otherwise changing it:    >>>>>>>>>>>>>>>>>>>>>>>> ADD A LOOP!!!!
+        notes=input("How have you been today? Write about your feelings and events here: ") 
+        print("\nYou won't be able to change this entry later, so please read it carefully now:")
+        print(f'"{notes}"')
+        checked=input("\nIf everything is alright >> press Enter.\nIf not >> type in the new version:")
+        if checked == '':
+            return notes
+        else:
+            return checked
+        
     def entry_reaction (self, entry: Entry): # choosing words of reaction/support to the entry content based on automatic evaluation
         self.entry=entry
 
-        # reactions to an entry:
+        # all possible support-reactions to an entry:
         emo={
             '0-29':["Looks like it's not the best day ever?", 
                  "Sh*t happens. You'll try again tomorrow.", 
@@ -193,25 +192,25 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
                    "So good to see you smiling, dear!"],
             }
 
-        # Printing the relevant reaction to the entry:
+        # Printing one of the above:
         x=self.entry.emo_meter
         #print(self.entry.entry_sentiment) ### DELETE AFTER!!!
         #print(x)  ### DELETE AFTER!!!
         print (f"{emo[x][0]} {choice(emo[x][1:])}")
 
         # Asking the user to evaluate their day themselves >> to use the grade in training this evaluation model in the future:
-        while entry.emo_grade==None:
+        while self.entry.emo_grade==None:
             grade=input("How do you rate this day yourself? Give it a score from 0 to 100: ")
             if grade.isdigit() and 0<=int(grade)<=100:
-                entry.emo_grade=grade
+                self.entry.emo_grade=grade
                 break
             else:
                 print("Please, enter a number from 0 to 100")
         
         # Brief assessment of the accuracy:
-        by_user=int(entry.emo_grade)
+        by_user=int(self.entry.emo_grade)
         by_app=self.entry.emo_meter
-        print(f'My guess was: {entry.emo_meter}.')
+        print(f'My guess was: {by_app}.')
         if (by_user<30 and by_app=='0-29') or (30<=by_user<=70 and by_app=='30-70') or (by_user>70 and by_app=='71-100'):
             print('So, I guessed correctly.\nThank you!')
         else:
@@ -228,20 +227,9 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
         diary_entry=Entry(datetime.now(), self.check_entry())
         self.__diary.diary_list.append(diary_entry)
         self.changes=True
-        print("The entry you added:")
+        print("\nThe entry you added:")
         print(diary_entry)
         self.entry_reaction(diary_entry)
-
-    # To CHECK/CHANGE an entry - based on its time&date (==3):
-    def check_entry(self):
-        notes=input("Diary entry: ") 
-        print("You won't be able to change this entry later, so please read it carefully now:")
-        print(f'"{notes}"')
-        checked=input("\nIf everything is correct >> press Enter.\nIf not >> type in the new version:")
-        if checked == '':
-            return notes
-        else:
-            return checked
 
     # To READ entries for the last N days (==2):
     def read_entries(self):
@@ -259,16 +247,29 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
         entry_pl = lambda a: ('entry' if str(a)[-1]=='1' and a!=11 else 'entries')
         print(f"\n[Overall, you've had {count} {entry_pl(count)} in the last {n_days} {day_pl(n_days)}]")
 
-    # STATISTICS (==4):
-    def delete_entry(self):
-        print("Please specify below, which entry you wish to delete")
-        entry=self.find_entry()
-        if entry == None:
-            print("You have entered valid date and time, but there is no diary entry searching them")
-        else:
-            self.__diary.diary_list.remove(entry)
-            self.changes=True
-            print("The entry was removed")
+    # STATISTICS - LANGUAGE (==3):
+    def stats_lang(self):
+        #df = pd.read_csv("data.txt", sep="\s+", header = None, names=['Name', 'Age', 'Height'])
+        #train_df = pd.read_txt('../input/imdb-dataset-sentiment-analysis-in-csv-format/Train.csv').head(4000)
+
+    # STATISTICS - MOOD (==4):
+
+
+
+####################################################### OLD STUFF ################################################################################
+    #def delete_entry(self):
+        #print("Please specify below, which entry you wish to delete")
+        #entry=self.find_entry()
+        #if entry == None:
+            #print("You have entered valid date and time, but there is no diary entry searching them")
+        #else:
+            #self.__diary.diary_list.remove(entry)
+            #self.changes=True
+            #print("The entry was removed")
+##################################################################################################################################################
+
+
+
 
     def execute(self):
         # MAIN LOOP:
@@ -300,7 +301,6 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
 # to RUN the app:
 app=Diary_app()
 app.execute()
-
 
 #############################################################
 # SENTIMENT EVALUATION MODEL:
