@@ -10,8 +10,9 @@ from random import choice, shuffle
 import re
 import pandas as pd
 import nltk
-#nltk.download(["stopwords","twitter_samples","movie_reviews","vader_lexicon","punkt", "punkt_tab"])
+#nltk.download(["stopwords","twitter_samples","movie_reviews","vader_lexicon","punkt", "punkt_tab", "averaged_perceptron_tagger_eng"]) ### UNCOMMENT for the FIRST TIME!
 from nltk.sentiment import SentimentIntensityAnalyzer
+from nltk.tokenize import RegexpTokenizer
 
 class Entry: # == the basic unit of the diary list
     def __init__ (self, entry_date_time: datetime, entry_content: str, emo_meter=None, emo_grade=None):
@@ -224,7 +225,7 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
     # To ADD an entry (==1):
     def new_entry(self):
         #notes=input("Diary entry: ")  
-        diary_entry=Entry(datetime.now(), self.check_entry())
+        diary_entry=Entry(datetime.now(), self.check_entry()) # datetime.now((tz=None))
         self.__diary.diary_list.append(diary_entry)
         self.changes=True
         print("\nThe entry you added:")
@@ -247,13 +248,95 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
         entry_pl = lambda a: ('entry' if str(a)[-1]=='1' and a!=11 else 'entries')
         print(f"\n[Overall, you've had {count} {entry_pl(count)} in the last {n_days} {day_pl(n_days)}]")
 
-    # STATISTICS - LANGUAGE (==3):
-    def stats_lang(self):
+    # creating a dataframe for statistics:
+    def stat (self):
+        data=[[e.entry_date_time.date(), e.entry_date_time.time().replace(microsecond=0), (e.entry_content+" "), e.emo_meter,int(e.emo_grade)] for e in self.__diary.diary_list]
+        df = pd.DataFrame(data, columns=['entry_date', 'entry_time', 'entry_content', 'emo_meter', 'emo_grade'])
+        #print(df)
+
+        nn=(datetime.now().date()-df.loc[0,'entry_date']).days # how many days ago the diary started
+        print(f"\nYou diary started {nn} days ago.")
+        n_days=int(input("For HOW MANY DAYS do you want to see statistics? Please, give a number: "))
+
+        while n_days>nn:
+            n_days=int(input(print(f"That's too many days. Your diary started only {nn} days ago\nPlease, give a realistic number: ")))
+
+        start_date=datetime.now().date()-timedelta(days=n_days)
+        #print(start_date)
+        df_stat=df[df['entry_date'] > start_date]
+        #print(df_stat)
+        return df_stat, n_days
+
+    # STATISTICS - LANGUAGE (==3):   
+    def stat_lang(self):
+        stat=self.stat()
+        df=stat[0]
+        days=stat[1]
+        words = df['entry_content'].sum()
+
+        tokenizer = RegexpTokenizer(r'\w+')
+        all_words=[i.lower() for i in tokenizer.tokenize(words)] # tockenizing + lowering case
+        
+        value_tockens=[['NN', 'NNS'], ['VB', 'VBZ', 'VBP', 'VBN', 'VBG', 'VBD'], ['JJ', 'JJR', 'JJS'], ['RB', 'RBR', 'RBS'],['UH']]
+        #value_tockens=['NN', 'NNS', 'VB', 'VBZ', 'VBP', 'VBN', 'VBG', 'VBD', 'JJ', 'JJR', 'JJS', 'RB', 'RBR', 'RBS', 'UH']
+
+        #extracting:
+        all_tags = nltk.pos_tag(all_words)
+        print(all_tags)
+        value_tags=[tag for tag in all_tags if tag[1] in sum(value_tockens,[])]
+        print(value_tags)
+        tagged_df=pd.DataFrame(all_tags, columns=['word','tag']) # converting the list of low-case tockens into a DF
+        
+        #print(tagged_df)
+        tagged_df['count'] = 1
+        tagged_df = tagged_df.groupby(['word','tag'])['count'].count().reset_index()
+        print(tagged_df.head(10))
+        print(tagged_df.sort_values(by='count', ascending=False).head(3))
+        #sorted_df=pd.DataFrame(all_tags, columns=['word','tag','count'])
+
+        nouns_df= tagged_df[tagged_df['tag'].isin(value_tockens[0])] 
+        verbs_df= tagged_df[tagged_df['tag'].isin(value_tockens[1])] 
+        adjectives_df= tagged_df[tagged_df['tag'].isin(value_tockens[2])]
+        adverbs_df= tagged_df[tagged_df['tag'].isin(value_tockens[3])]
+        interjections_df= tagged_df[tagged_df['tag'].isin(value_tockens[4])]
+
+        #all_valuable=nouns+verbs+adjectives+adverbs+interjections
+        #print(all_valuable)
+        #nr1_word=all_valuable.most_common(1) # returns a list of n(==1) most common elements
+
+        nr1_noun=nouns.most_common(1)
+        nr1_verb=verbs.most_common(1)
+        nr1_adjective=adjectives.most_common(1)
+        nr1_adverb=adverbs.most_common(1)
+        nr1_interjection=interjections.most_common(1)
+
+        print(f'Days included in analysis: {days}')
+        #print(f'The word you used most (apat from auxiliary parts of speech): {nr1_word}')
+        print('\nIn this time period, the most used words were (by part of speech):')
+        print(f'Noun: {nr1_noun[0]}, used {nr1_noun[1]} times')
+        print(f'Verb: {nr1_verb[0]}, used {nr1_verb[1]} times')
+        print(f'Adjective: {nr1_adjective[0]}, used {nr1_adjective[1]} times')
+        print(f'Adverb: {nr1_adverb[0]}, used {nr1_adverb[1]} times')
+        print(f'Interjection: {nr1_interjection[0]}, used {nr1_interjection[1]} times')
+
+        #sum_row = df.iloc[0].sum(axis=0)
+        #entry_from_c=Entry(c_entry_date_time,c_entry_content,c_entry_emo_meter,c_entry_emo_grade)
+        #self.diary_list.append(entry_from_c)
+
         #df = pd.read_csv("data.txt", sep="\s+", header = None, names=['Name', 'Age', 'Height'])
         #train_df = pd.read_txt('../input/imdb-dataset-sentiment-analysis-in-csv-format/Train.csv').head(4000)
 
-    # STATISTICS - MOOD (==4):
+        #return f"> {self.entry_date_time.day:02g}.{self.entry_date_time.month:02g}.{self.entry_date_time.year} [{self.entry_date_time.hour:02g}:{self.entry_date_time.minute:02g}:{self.entry_date_time.second:02g}] {self.entry_content} (auto-grade: {self.emo_meter}, user-grade: {self.emo_grade})"
+        #return f"> {self.entry_date_time.day:02g}.{self.entry_date_time.month:02g}.{self.entry_date_time.year} [{self.entry_date_time.hour:02g}:{self.entry_date_time.minute:02g}:{self.entry_date_time.second:02g}] {self.entry_content}"
+    
+        #start_date=start_date.strftime("%Y-%m-%d")
+        #rslt_df = dataframe[dataframe['Percentage'] > 70] 
+        #holiday = ['1 January 2018','26 January 2018','2 March 2018','30 March 2018']
+        #df.query('date==@holiday')
 
+    # STATISTICS - MOOD (==4):
+    #def stat_mood(self):
+        #df = self.stat()
 
 
 ####################################################### OLD STUFF ################################################################################
@@ -291,12 +374,12 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
                 self.read_entries()
 
             # To see language statistics:    
-            #if menu==3:
-                #self.change_entry()
+            if menu==3:
+                self.stat()
 
             # To see mood statistics:    
-            #if menu==4:
-                #self.delete_entry()      
+            if menu==4:
+                self.stat_lang() 
 
 # to RUN the app:
 app=Diary_app()
