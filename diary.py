@@ -13,6 +13,7 @@ import nltk
 #nltk.download(["stopwords","twitter_samples","movie_reviews","vader_lexicon","punkt", "punkt_tab", "averaged_perceptron_tagger_eng"]) ### UNCOMMENT for the FIRST TIME!
 from nltk.sentiment import SentimentIntensityAnalyzer
 from nltk.tokenize import RegexpTokenizer
+from nltk.corpus import stopwords
 
 class Entry: # == the basic unit of the diary list
     def __init__ (self, entry_date_time: datetime, entry_content: str, emo_meter=None, emo_grade=None):
@@ -101,7 +102,8 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
                 self.quit()
         
     def menu(self): # == displays the menu
-        print("\nPlease, choose what you want to do:\n0 - exit this app\n1 - add an entry\n2 - read entries for the last few days\n3 - check stats on your language\n4 - check stats on your moods")    
+        print()
+        print("Please, choose what you want to do:\n0 - exit this app\n1 - add an entry\n2 - read entries for the last few days\n3 - check stats on your language\n4 - check stats on your moods")    
         try:
             choice=int(input("\nYour choice: "))
             if choice in [0,1,2,3,4]:
@@ -255,16 +257,16 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
         #print(df)
 
         nn=(datetime.now().date()-df.loc[0,'entry_date']).days # how many days ago the diary started
-        print(f"\nYou diary started {nn} days ago.")
-        n_days=int(input("For HOW MANY DAYS do you want to see statistics? Please, give a number: "))
+        nn+=1 # including today (e.g. if diary started 4 days ago > you have 5 days to see: 4 days + today)
+        print(f"\nToday is day {nn} of your diary.")
+        n_days=int(input("How many days of statistics do you want to see? Please, give a number: "))
 
         while n_days>nn:
             n_days=int(input(print(f"That's too many days. Your diary started only {nn} days ago\nPlease, give a realistic number: ")))
 
         start_date=datetime.now().date()-timedelta(days=n_days)
-        #print(start_date)
+        #print(f'start date:{start_date}')
         df_stat=df[df['entry_date'] > start_date]
-        #print(df_stat)
         return df_stat, n_days
 
     # STATISTICS - LANGUAGE (==3):   
@@ -275,83 +277,69 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
         words = df['entry_content'].sum()
 
         tokenizer = RegexpTokenizer(r'\w+')
-        all_words=[w.lower() for w in tokenizer.tokenize(words)] # tockenizing (=dividing word-by-word) + lowering case
+        stop_words = stopwords.words('english')
+        all_words=[w.lower() for w in tokenizer.tokenize(words) if not w.lower() in stop_words] # tockenizing (=dividing word-by-word) + lowering case
 
         all_tags = nltk.pos_tag(all_words) # tagging ==> list of tuples (word, part of speech)
         #print(all_tags)        
-        value_tockens=[['NN', 'NNS'], ['VB', 'VBZ', 'VBP', 'VBN', 'VBG', 'VBD'], ['JJ', 'JJR', 'JJS'], ['RB', 'RBR', 'RBS'],['UH']] # parts of speech to be used
-        value_tags=[tag for tag in all_tags if tag[1] in sum(value_tockens,[])] # filtering useful tuples from all tags
-        #print(value_tags)
+        value_tockens=[['NN','NNS'],['VB','VBZ','VBP','VBN','VBG','VBD'],['JJ','JJR','JJS'],['RB','RBR','RBS'],['UH']] # parts of speech to be used: tags
+        value_dfs=['nouns','verbs','adjectives','adverbs','interjections'] # parts of speech to be used: names
+        value_tags=[tag for tag in all_tags if (tag[1] in sum(value_tockens,[]) and len(tag[0])>2)] # filtering useful tuples from all tags
         tagged_df=pd.DataFrame(value_tags, columns=['word','tag']) # converting the list of useful tags into a df      
-        #print(tagged_df)
-        tagged_df['count'] = 1 # adding 'count' for each word
-        tagged_df = tagged_df.groupby(['word','tag'])['count'].count().reset_index() # (contains duplicates! word=!unique, count=1 for every word)
-        #print(f'tagged_df(head 10):\n{tagged_df.head(10)}')
-        sorted_df=tagged_df.sort_values(by='count', ascending=False) # merging duplicates (word=unique, count>=1) 
-        #print(f'sorted_df(head 3):\n{sorted_df.head(3)}')
-        #counted_df=sorted_df.groupby('count') #as_index=False, sort ascending=False
-        #print(counted_df.head(10))
+        
+        print(f'\nLanguage statistics for {days} days (main parts of speech)')
+        print()
 
-        counted_df=sorted_df.groupby(['count'])['word'].apply(', '.join).reset_index()
-        #counted_df=sorted_df.groupby(['word','count'])['word'].apply(', '.join).reset_index()
-        print(counted_df.head(10))
-
-        #df.groupby("state", sort=False)["last_name"].count()
-        #nouns_df= tagged_df[tagged_df['tag'].isin(value_tockens[0])] 
-        #verbs_df= tagged_df[tagged_df['tag'].isin(value_tockens[1])] 
-        #adjectives_df= tagged_df[tagged_df['tag'].isin(value_tockens[2])]
-        #adverbs_df= tagged_df[tagged_df['tag'].isin(value_tockens[3])]
-        #interjections_df= tagged_df[tagged_df['tag'].isin(value_tockens[4])]
-
-        #nr1_noun=nouns.most_common(1)
-        #nr1_verb=verbs.most_common(1)
-        #nr1_adjective=adjectives.most_common(1)
-        #nr1_adverb=adverbs.most_common(1)
-        #nr1_interjection=interjections.most_common(1)
-
-        #print(f'Days included in analysis: {days}')
-        #print(f'The word you used most (apat from auxiliary parts of speech): {nr1_word}')
-        #print('\nIn this time period, the most used words were (by part of speech):')
-        #print(f'Noun: {nr1_noun[0]}, used {nr1_noun[1]} times')
-        #print(f'Verb: {nr1_verb[0]}, used {nr1_verb[1]} times')
-        #print(f'Adjective: {nr1_adjective[0]}, used {nr1_adjective[1]} times')
-        #print(f'Adverb: {nr1_adverb[0]}, used {nr1_adverb[1]} times')
-        #print(f'Interjection: {nr1_interjection[0]}, used {nr1_interjection[1]} times')
-
-        #sum_row = df.iloc[0].sum(axis=0)
-        #entry_from_c=Entry(c_entry_date_time,c_entry_content,c_entry_emo_meter,c_entry_emo_grade)
-        #self.diary_list.append(entry_from_c)
-
-        #df = pd.read_csv("data.txt", sep="\s+", header = None, names=['Name', 'Age', 'Height'])
-        #train_df = pd.read_txt('../input/imdb-dataset-sentiment-analysis-in-csv-format/Train.csv').head(4000)
-
-        #return f"> {self.entry_date_time.day:02g}.{self.entry_date_time.month:02g}.{self.entry_date_time.year} [{self.entry_date_time.hour:02g}:{self.entry_date_time.minute:02g}:{self.entry_date_time.second:02g}] {self.entry_content} (auto-grade: {self.emo_meter}, user-grade: {self.emo_grade})"
-        #return f"> {self.entry_date_time.day:02g}.{self.entry_date_time.month:02g}.{self.entry_date_time.year} [{self.entry_date_time.hour:02g}:{self.entry_date_time.minute:02g}:{self.entry_date_time.second:02g}] {self.entry_content}"
-    
-        #start_date=start_date.strftime("%Y-%m-%d")
-        #rslt_df = dataframe[dataframe['Percentage'] > 70] 
-        #holiday = ['1 January 2018','26 January 2018','2 March 2018','30 March 2018']
-        #df.query('date==@holiday')
-
-        #all_tags = nltk.pos_tag(stemmed_words)
-        #from nltk.stem.wordnet import WordNetLemmatizer
-        #words = [tag for tag in all_tags if tag[1] in value_tockens[1]]
-        #for word in words:
-            #print (word[0]+"-->"+WordNetLemmatizer().lemmatize(word[0],'v'))
-
-        #nr1_word=all_valuable.most_common(1) # returns a list of n(==1) most common elements
-
-        #stemmer = SnowballStemmer("english")
-        #stemmed_words=[stemmer.stem(w) for w in all_words] # returns the stem form of each word, eg
-
-        #all_valuable=nouns+verbs+adjectives+adverbs+interjections
-        #print(all_valuable)
-        #nr1_word=all_valuable.most_common(1) # returns a list of n(==1) most common elements
+        # printing by part-of-speech, separately:
+        for x in range(0,len(value_dfs)):
+            y=tagged_df[tagged_df['tag'].isin(value_tockens[x])] # creating a dedicated df (eg 'nonuns')
+            print(f'{value_dfs[x].capitalize()}: {y.shape[0]}. ',end='') 
+            if y.shape[0] != 0:
+                print(f'Top-5 {value_dfs[x]}: ',end='')
+                y_top5=y.groupby(['word']).size().reset_index(name='count').sort_values(by='count', ascending=False).head(5) # sorting words by nr of repetitions, cutting top-5
+                print(*y_top5['word'].values.tolist(), sep = ", ")
+            else:
+                pass
+        print()
 
     # STATISTICS - MOOD (==4):
-    #def stat_mood(self):
-        #df = self.stat()
+    def stat_mood(self): #return df_stat, n_days
+        df_days = self.stat() #df = pd.DataFrame(data, columns=['entry_date', 'entry_time', 'entry_content', 'emo_meter', 'emo_grade'])
+        df=df_days[0]
+        days=df_days[1]
+        print(f'df:{df}')
+        #print(f'days:{days}')
 
+        print()
+        print(f'Your mood statistics for the last {days} days (based on your own assessment)')
+        print(df)
+
+        #print(f'Average - based on automatic language analysis: {df[0]['emo_meter'].mean()}')
+        print(f'Average: {df['emo_grade'].mean()}')
+        print(f'Average - based on day-of-week:')
+        #print(f'Average- based on time-of-day:')
+
+
+        df['entry_date'] = pd.to_datetime(df['entry_date']) # converting the date strings to datetime objects
+        df['day_of_week'] = df['entry_date'].dt.day_name() # adding a new column to store the day of the week
+        days=df[['day_of_week','emo_grade']].groupby(['day_of_week']).mean().reset_index().sort_values(by='emo_grade', ascending=False)#.reindex(columns=['emo_grade','day_of_week'])
+        #days=df[['day_of_week','emo_grade']].groupby(['day_of_week']).mean().reset_index().sort_values(by='emo_grade', ascending=False).reindex(columns=['emo_grade','day_of_week']).reset_index()
+        print(days.set_index('emo_grade'))
+
+        #gkk = df.groupby(['Team', 'Position'])
+
+
+        # printing by part-of-speech, separately:
+        #for x in range(0,len(value_dfs)):
+            #y=tagged_df[tagged_df['tag'].isin(value_tockens[x])] # creating a dedicated df (eg 'nonuns')
+            #print(f'{value_dfs[x].capitalize()}: {y.shape[0]}. ',end='') 
+            #if y.shape[0] != 0:
+                #print(f'Top-5 {value_dfs[x]}: ',end='')
+                #y_top5=y.groupby(['word']).size().reset_index(name='count').sort_values(by='count', ascending=False).head(5) # sorting words by nr of repetitions, cutting top-5
+                #print(*y_top5['word'].values.tolist(), sep = ", ")
+            #else:
+                #pass
+        #print()
 
 ####################################################### OLD STUFF ################################################################################
     #def delete_entry(self):
@@ -389,11 +377,11 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
 
             # To see language statistics:    
             if menu==3:
-                self.stat()
+                self.stat_lang()
 
             # To see mood statistics:    
             if menu==4:
-                self.stat_lang() 
+                self.stat_mood() 
 
 # to RUN the app:
 app=Diary_app()
