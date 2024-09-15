@@ -275,49 +275,48 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
         words = df['entry_content'].sum()
 
         tokenizer = RegexpTokenizer(r'\w+')
-        all_words=[i.lower() for i in tokenizer.tokenize(words)] # tockenizing + lowering case
-        
-        value_tockens=[['NN', 'NNS'], ['VB', 'VBZ', 'VBP', 'VBN', 'VBG', 'VBD'], ['JJ', 'JJR', 'JJS'], ['RB', 'RBR', 'RBS'],['UH']]
-        #value_tockens=['NN', 'NNS', 'VB', 'VBZ', 'VBP', 'VBN', 'VBG', 'VBD', 'JJ', 'JJR', 'JJS', 'RB', 'RBR', 'RBS', 'UH']
+        all_words=[w.lower() for w in tokenizer.tokenize(words)] # tockenizing (=dividing word-by-word) + lowering case
 
-        #extracting:
-        all_tags = nltk.pos_tag(all_words)
-        print(all_tags)
-        value_tags=[tag for tag in all_tags if tag[1] in sum(value_tockens,[])]
-        print(value_tags)
-        tagged_df=pd.DataFrame(all_tags, columns=['word','tag']) # converting the list of low-case tockens into a DF
-        
+        all_tags = nltk.pos_tag(all_words) # tagging ==> list of tuples (word, part of speech)
+        #print(all_tags)        
+        value_tockens=[['NN', 'NNS'], ['VB', 'VBZ', 'VBP', 'VBN', 'VBG', 'VBD'], ['JJ', 'JJR', 'JJS'], ['RB', 'RBR', 'RBS'],['UH']] # parts of speech to be used
+        value_tags=[tag for tag in all_tags if tag[1] in sum(value_tockens,[])] # filtering useful tuples from all tags
+        #print(value_tags)
+        tagged_df=pd.DataFrame(value_tags, columns=['word','tag']) # converting the list of useful tags into a df      
         #print(tagged_df)
-        tagged_df['count'] = 1
-        tagged_df = tagged_df.groupby(['word','tag'])['count'].count().reset_index()
-        print(tagged_df.head(10))
-        print(tagged_df.sort_values(by='count', ascending=False).head(3))
-        #sorted_df=pd.DataFrame(all_tags, columns=['word','tag','count'])
+        tagged_df['count'] = 1 # adding 'count' for each word
+        tagged_df = tagged_df.groupby(['word','tag'])['count'].count().reset_index() # (contains duplicates! word=!unique, count=1 for every word)
+        #print(f'tagged_df(head 10):\n{tagged_df.head(10)}')
+        sorted_df=tagged_df.sort_values(by='count', ascending=False) # merging duplicates (word=unique, count>=1) 
+        #print(f'sorted_df(head 3):\n{sorted_df.head(3)}')
+        #counted_df=sorted_df.groupby('count') #as_index=False, sort ascending=False
+        #print(counted_df.head(10))
 
-        nouns_df= tagged_df[tagged_df['tag'].isin(value_tockens[0])] 
-        verbs_df= tagged_df[tagged_df['tag'].isin(value_tockens[1])] 
-        adjectives_df= tagged_df[tagged_df['tag'].isin(value_tockens[2])]
-        adverbs_df= tagged_df[tagged_df['tag'].isin(value_tockens[3])]
-        interjections_df= tagged_df[tagged_df['tag'].isin(value_tockens[4])]
+        counted_df=sorted_df.groupby(['count'])['word'].apply(', '.join).reset_index()
+        #counted_df=sorted_df.groupby(['word','count'])['word'].apply(', '.join).reset_index()
+        print(counted_df.head(10))
 
-        #all_valuable=nouns+verbs+adjectives+adverbs+interjections
-        #print(all_valuable)
-        #nr1_word=all_valuable.most_common(1) # returns a list of n(==1) most common elements
+        #df.groupby("state", sort=False)["last_name"].count()
+        #nouns_df= tagged_df[tagged_df['tag'].isin(value_tockens[0])] 
+        #verbs_df= tagged_df[tagged_df['tag'].isin(value_tockens[1])] 
+        #adjectives_df= tagged_df[tagged_df['tag'].isin(value_tockens[2])]
+        #adverbs_df= tagged_df[tagged_df['tag'].isin(value_tockens[3])]
+        #interjections_df= tagged_df[tagged_df['tag'].isin(value_tockens[4])]
 
-        nr1_noun=nouns.most_common(1)
-        nr1_verb=verbs.most_common(1)
-        nr1_adjective=adjectives.most_common(1)
-        nr1_adverb=adverbs.most_common(1)
-        nr1_interjection=interjections.most_common(1)
+        #nr1_noun=nouns.most_common(1)
+        #nr1_verb=verbs.most_common(1)
+        #nr1_adjective=adjectives.most_common(1)
+        #nr1_adverb=adverbs.most_common(1)
+        #nr1_interjection=interjections.most_common(1)
 
-        print(f'Days included in analysis: {days}')
+        #print(f'Days included in analysis: {days}')
         #print(f'The word you used most (apat from auxiliary parts of speech): {nr1_word}')
-        print('\nIn this time period, the most used words were (by part of speech):')
-        print(f'Noun: {nr1_noun[0]}, used {nr1_noun[1]} times')
-        print(f'Verb: {nr1_verb[0]}, used {nr1_verb[1]} times')
-        print(f'Adjective: {nr1_adjective[0]}, used {nr1_adjective[1]} times')
-        print(f'Adverb: {nr1_adverb[0]}, used {nr1_adverb[1]} times')
-        print(f'Interjection: {nr1_interjection[0]}, used {nr1_interjection[1]} times')
+        #print('\nIn this time period, the most used words were (by part of speech):')
+        #print(f'Noun: {nr1_noun[0]}, used {nr1_noun[1]} times')
+        #print(f'Verb: {nr1_verb[0]}, used {nr1_verb[1]} times')
+        #print(f'Adjective: {nr1_adjective[0]}, used {nr1_adjective[1]} times')
+        #print(f'Adverb: {nr1_adverb[0]}, used {nr1_adverb[1]} times')
+        #print(f'Interjection: {nr1_interjection[0]}, used {nr1_interjection[1]} times')
 
         #sum_row = df.iloc[0].sum(axis=0)
         #entry_from_c=Entry(c_entry_date_time,c_entry_content,c_entry_emo_meter,c_entry_emo_grade)
@@ -333,6 +332,21 @@ class Diary_app(Diary): # == interface to manage the Diary and the Entries in it
         #rslt_df = dataframe[dataframe['Percentage'] > 70] 
         #holiday = ['1 January 2018','26 January 2018','2 March 2018','30 March 2018']
         #df.query('date==@holiday')
+
+        #all_tags = nltk.pos_tag(stemmed_words)
+        #from nltk.stem.wordnet import WordNetLemmatizer
+        #words = [tag for tag in all_tags if tag[1] in value_tockens[1]]
+        #for word in words:
+            #print (word[0]+"-->"+WordNetLemmatizer().lemmatize(word[0],'v'))
+
+        #nr1_word=all_valuable.most_common(1) # returns a list of n(==1) most common elements
+
+        #stemmer = SnowballStemmer("english")
+        #stemmed_words=[stemmer.stem(w) for w in all_words] # returns the stem form of each word, eg
+
+        #all_valuable=nouns+verbs+adjectives+adverbs+interjections
+        #print(all_valuable)
+        #nr1_word=all_valuable.most_common(1) # returns a list of n(==1) most common elements
 
     # STATISTICS - MOOD (==4):
     #def stat_mood(self):
