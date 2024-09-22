@@ -13,8 +13,6 @@ PROJECT: EmoDiary /STUDENT: Darina Bunak /COURSE: Programming //Professional Dip
 5. TESTING >>> When prompted, use file name 'TEST' (file TEST.txt attached)
 '''
 
-streamlit run https://raw.githubusercontent.com/streamlit/demo-uber-nyc-pickups/master/streamlit_app.py
-
 ### Import the necessary tools:
 #pip install --user -U nltk # << unhash for the very first time
 from datetime import datetime, timedelta
