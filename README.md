@@ -2,7 +2,7 @@ PROJECT: **EmoDiary**
 
 AUTHOR: **Darina Bunak**  
 
-TECHNOLOGIES: **Python (Pandas, NumPy, ML: NLTK)**  
+TECHNOLOGIES: **Python (OOP, Pandas, NumPy, ML: NLTK)**  
 
 ##  
 ![Pic_012](https://github.com/user-attachments/assets/b30ef837-2176-471f-9fd1-9721208e35c6)
@@ -19,17 +19,26 @@ or show reaction of the patient to certain events. Looking into it and analysing
 * **Language analysis** can deepen therapist's knowledge of dominating ideas and hint on underlying connotations in patient's mind
 ##  
 
-**SOLUTION**  
+**TECHNICAL SOLUTION**  
+
+The code is based on the following hierarchy of inherent classes:  
+- Diary_app  
+- Diary  
+- Entry
+
+Each object of class *Entry* stores the *following attributes*: date and time, entry's content, automatic mood grade, mood grade by User.  
+Upon update, new entries are written into the .txt file, which defines Diary's name.
+The procedures are error-proof and verified on every step.
+
+**FLOW**
 
 **I.** The user is asked to **enter the Diary's name** or to create a new one. After that, the **following options** are available:  
-
 *1. Add an entry*  
 *2. Read entries added over a requested period  of time*  
 *3. Check language statistics*  
 *4. Check mood statistics*  
 
 **II.** If a new entry is added, the user is given a supportive reaction, based on the built-in sentiment evaluation.  
-
 **Evaluation grades** are given in the range **0-100** and divide all sentiments into **3 categories**, i.e **bad** (0-29), **average** (30-70) and **good** (71-100).  
 
 Examplary responses:  
@@ -39,14 +48,13 @@ Examplary responses:
 - [x] **Good mood >>** "It seems you've had a pretty good day. Congrats! Keep going!"
 
 **III.** After that, the user is asked to give their own evaluation of their mood:  
-
 "**How do you rate this day yourself? Give it a score from 0 to 100:**"  
 
 If the automatic evaluation did not match user's grade, the app will admit it and apologise: 
 *"I see that I was wrong. Your rate will help me guess better in the future.Thank you!"*
 
 **Collecting personal evaluation is important for two reasons;**  
-* It collects *data for future tuning* of the evaluation model
+* It collects *data for future tuning* of the evaluation model (see COMMENTS)
 * When the model is well-trained on a large set of diary-like data, it could potentially *reveal subjectivity of user's evaluation*. 
 ##  
 ![Pic_021](https://github.com/user-attachments/assets/c08ac2e9-f2ee-4594-afa5-4d81b9b9b19a)
